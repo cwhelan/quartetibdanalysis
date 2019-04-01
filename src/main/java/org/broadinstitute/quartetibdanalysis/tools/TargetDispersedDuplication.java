@@ -23,7 +23,7 @@ import java.util.zip.GZIPOutputStream;
 @CommandLineProgramProperties(
         summary = "Compute DD location based on IBD",
         oneLineSummary = "Compute DD location based on IBD",
-        programGroup = StructuralVariantDiscoveryProgramGroup.class)
+        programGroup = QuartetIBDAnalysisProgramGroup.class)
 public class TargetDispersedDuplication extends GATKTool {
 
     @Argument(shortName = "ibdQuals", fullName = "ibdQuals", doc = "File of IBD quals", optional = true)
