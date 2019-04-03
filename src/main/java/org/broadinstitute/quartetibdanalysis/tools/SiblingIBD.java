@@ -111,7 +111,7 @@ public class SiblingIBD extends VariantWalker {
     @Argument(shortName = "cnvCallsFile",optional = true,fullName = "cnvCallsFile", doc="VCF file containing CNV calls")
     private FeatureInput<VariantContext> cnvCalls = null;
 
-    @Argument(fullName="pedigree", shortName="ped", doc="Pedigree file", optional=false)
+    @Argument(fullName="pedigree", shortName="ped", doc="Pedigree file")
     private File pedigreeFile = null;
 
 

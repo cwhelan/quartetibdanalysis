@@ -219,6 +219,7 @@ configurations {
 final javadocJDKFiles = files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs())
 
 dependencies {
+    compile files('lib/SVToolkit.jar')
     compile 'org.broadinstitute:gatk:4.1.1.0'
     // javadoc utilities; compile/test only to prevent redistribution of sdk jars
     compileOnly(javadocJDKFiles)
