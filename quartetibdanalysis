@@ -25,7 +25,7 @@ import re
 
 script = os.path.dirname(os.path.realpath(__file__))
 
-projectName = "quartetibdanalysis"
+projectName = "QuartetIBDAnalysis"
 
 BUILD_LOCATION = script +"/build/install/" + projectName + "/bin/"
 GATK_RUN_SCRIPT = BUILD_LOCATION + projectName
@@ -210,11 +210,11 @@ def formatLocalJarCommand(localJar):
 def getGatkWrapperScript(throwIfNotFound=True):
     if not os.path.exists(GATK_RUN_SCRIPT):
         if throwIfNotFound:
-            raise GATKLaunchException("Missing GATK wrapper script: " + GATK_RUN_SCRIPT + "\nTo generate the wrapper run:\n\n    " + script + "/gradlew installDist")
+            raise GATKLaunchException("Missing wrapper script: " + GATK_RUN_SCRIPT + "\nTo generate the wrapper run:\n\n    " + script + "/gradlew installDist")
         else:
             return None
 
-    sys.stderr.write("Using GATK wrapper script " + GATK_RUN_SCRIPT)
+    sys.stderr.write("Using wrapper script " + GATK_RUN_SCRIPT)
     return GATK_RUN_SCRIPT
 
 def getLocalJar(throwIfNotFound=True):
