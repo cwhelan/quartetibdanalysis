@@ -13,7 +13,7 @@ buildscript {
 plugins {
     id "java"           // set up default java compile and test tasks
     id "application"    // provides installDist
-    id "com.github.johnrengelman.shadow" version "1.2.3"    //used to build the shadow and sparkJars
+    id "com.github.johnrengelman.shadow" version "2.0.4"    //used to build the shadow and sparkJars
     id 'com.palantir.git-version' version '0.5.1' //version helper
 }
 
@@ -197,7 +197,7 @@ tasks.withType(Jar) {
     }
 }
 
-task wrapper(type: Wrapper) {
+wrapper {
     gradleVersion = '3.1'
 }
 
