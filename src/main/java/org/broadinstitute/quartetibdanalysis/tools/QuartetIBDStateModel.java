@@ -86,7 +86,6 @@ public class QuartetIBDStateModel implements IBDStateModel {
                 if (observation == IBDObservation.ZERO_OR_ONE_OR_TWO) {
                     return result;
                 }
-
                 if (spFile != null) {
                     spFile.print(vc.getContig() + "\t" + vc.getStart() + "\t" + siblingPair.getName() + "\t" + observation.ordinal() + "\n");
                 }
@@ -126,7 +125,11 @@ public class QuartetIBDStateModel implements IBDStateModel {
     }
 
     private boolean passesABHetThreshold(final Genotype gt) {
-        final double rawAB = ((double) gt.getAD()[0]) / (gt.getAD()[0] + gt.getAD()[1]);
+        int[] alleleReadCounts = gt.getAD();
+        if (alleleReadCounts == null) {
+            return true;
+        }
+        final double rawAB = ((double) alleleReadCounts[0]) / (alleleReadCounts[0] + alleleReadCounts[1]);
         final double AB = Math.min(rawAB, 1 - rawAB);
         return AB > hetABThreshold;
     }

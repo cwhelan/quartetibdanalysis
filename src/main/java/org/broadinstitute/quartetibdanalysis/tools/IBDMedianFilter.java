@@ -36,7 +36,8 @@ public class IBDMedianFilter {
         ibdClassWindow = new ArrayDeque<>(windowSize);
         coords = new ArrayDeque<>(windowSize / 2);
         clusterCounts.put(IBDState.ZERO, 0);
-        clusterCounts.put(IBDState.ONE, 0);
+        clusterCounts.put(IBDState.ONEF, 0);
+        clusterCounts.put(IBDState.ONEM, 0);
         clusterCounts.put(IBDState.TWO, 0);
     }
 
@@ -62,8 +63,8 @@ public class IBDMedianFilter {
     private IBDState median() {
         if (clusterCounts.get(IBDState.ZERO) >= windowSize / 2) {
             return IBDState.ZERO;
-        } else if (clusterCounts.get(IBDState.ZERO) + clusterCounts.get(IBDState.ONE) >= windowSize / 2) {
-            return IBDState.ONE;
+        } else if (clusterCounts.get(IBDState.ZERO) + clusterCounts.get(IBDState.ONEF) >= windowSize / 2) {
+            return IBDState.ONEF;
         } else {
             return IBDState.TWO;
         }

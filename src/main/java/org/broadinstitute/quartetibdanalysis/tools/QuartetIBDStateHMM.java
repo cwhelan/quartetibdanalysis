@@ -70,14 +70,16 @@ public class QuartetIBDStateHMM {
     private void initProbs(final double recombinationProb, final double errorProb) {
 
         initialProbs = new EnumMap<>(IBDState.class);
-        initialProbs.put(IBDState.ZERO, Math.log10(.33));
-        initialProbs.put(IBDState.ONE, Math.log10(.33));
-        initialProbs.put(IBDState.TWO, Math.log10(.33));
+        initialProbs.put(IBDState.ZERO, Math.log10(.25));
+        initialProbs.put(IBDState.ONEF, Math.log10(.25));
+        initialProbs.put(IBDState.ONEM, Math.log10(.25));
+        initialProbs.put(IBDState.TWO, Math.log10(.25));
 
         transitionProbs = new EnumMap<>(IBDState.class);
-        transitionProbs.put(IBDState.ZERO, new Double[]{Math.log10((1 - recombinationProb) - (errorProb / 2)), Math.log10(recombinationProb - (errorProb / 2)), Math.log10(errorProb)});
-        transitionProbs.put(IBDState.ONE, new Double[]{Math.log10((recombinationProb / 2)), Math.log10(1 - recombinationProb), Math.log10(recombinationProb / 2)});
-        transitionProbs.put(IBDState.TWO, new Double[]{Math.log10(errorProb), Math.log10(recombinationProb - (errorProb / 2)), Math.log10((1 - recombinationProb) - (errorProb / 2))});
+        transitionProbs.put(IBDState.ZERO, new Double[]{Math.log10((1 - recombinationProb) - (errorProb / 2)), Math.log10(recombinationProb / 2 - (errorProb / 4)), Math.log10(recombinationProb / 2 - (errorProb / 4)), Math.log10(errorProb)});
+        transitionProbs.put(IBDState.ONEF, new Double[]{Math.log10((recombinationProb / 2)), Math.log10(1 - recombinationProb - errorProb), Math.log10(errorProb), Math.log10(recombinationProb / 2)});
+        transitionProbs.put(IBDState.ONEM, new Double[]{Math.log10((recombinationProb / 2)), Math.log10(errorProb), Math.log10(1 - recombinationProb - errorProb), Math.log10(recombinationProb / 2)});
+        transitionProbs.put(IBDState.TWO, new Double[]{Math.log10(errorProb), Math.log10(recombinationProb / 2 - (errorProb / 4)), Math.log10(recombinationProb / 2 - (errorProb / 4)), Math.log10((1 - recombinationProb) - (errorProb / 2))});
     }
 
     /**
@@ -252,24 +254,36 @@ public class QuartetIBDStateHMM {
     private Double getEmission(final IBDState s, final IBDObservation o) {
         switch (s) {
             case ZERO:
-                if (o == IBDObservation.ZERO || o == IBDObservation.ZERO_OR_ONE || o == IBDObservation.ZERO_OR_TWO) {
+                if (o == IBDObservation.ZERO || o == IBDObservation.ZERO_OR_TWO) {
+                    return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 6);
+                } else if (o == IBDObservation.ZERO_OR_ONEF || o == IBDObservation.ZERO_OR_ONEM) {
                     return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
                 } else {
-                    return Math.log10(ERROR_EMISSION_PROBABILITY / 3);
+                    return Math.log10(ERROR_EMISSION_PROBABILITY / 4);
                 }
-            case ONE:
-                if (o == IBDObservation.ONE || o == IBDObservation.ZERO_OR_ONE || o == IBDObservation.ONE_OR_TWO) {
+            case ONEF:
+                if (o == IBDObservation.ONE || o == IBDObservation.ZERO_OR_ONEF || o == IBDObservation.ONEF_OR_TWO) {
                     return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
                 } else if (o == IBDObservation.ZERO_OR_TWO) {
                     return Math.log10(IBD1_HET_ERROR_EMISSION_PROBABILITY);
                 } else {
-                    return Math.log10(IDB1_OTHER_ERROR_EMISSION_PROBABILITY / 2);
+                    return Math.log10(IDB1_OTHER_ERROR_EMISSION_PROBABILITY / 4);
+                }
+            case ONEM:
+                if (o == IBDObservation.ONE || o == IBDObservation.ZERO_OR_ONEM || o == IBDObservation.ONEM_OR_TWO) {
+                    return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
+                } else if (o == IBDObservation.ZERO_OR_TWO) {
+                    return Math.log10(IBD1_HET_ERROR_EMISSION_PROBABILITY);
+                } else {
+                    return Math.log10(IDB1_OTHER_ERROR_EMISSION_PROBABILITY / 4);
                 }
             case TWO:
-                if (o == IBDObservation.TWO || o == IBDObservation.ZERO_OR_TWO || o == IBDObservation.ONE_OR_TWO) {
+                if (o == IBDObservation.TWO || o == IBDObservation.ZERO_OR_TWO) {
+                    return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 6);
+                } else if (o == IBDObservation.ONEF_OR_TWO || o == IBDObservation.ONEM_OR_TWO) {
                     return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
                 } else {
-                    return Math.log10(ERROR_EMISSION_PROBABILITY / 3);
+                    return Math.log10(ERROR_EMISSION_PROBABILITY / 4);
                 }
         }
         return Double.NEGATIVE_INFINITY;

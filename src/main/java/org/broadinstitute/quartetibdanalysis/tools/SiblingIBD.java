@@ -114,7 +114,6 @@ public class SiblingIBD extends VariantWalker {
     @Argument(fullName="pedigree", shortName="ped", doc="Pedigree file")
     private File pedigreeFile = null;
 
-
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
             doc="File to which variants should be written")
@@ -321,6 +320,7 @@ public class SiblingIBD extends VariantWalker {
             if (sib1Gt.isCalled() && sib2Gt.isCalled()) {
                 final List<VariantIBDState> variantIDBStatesForSibPair = model.addSite(subsetVariantContext,
                         genotypes, siblingPair, sib1Gt, sib2Gt, overlappingCNVs,outFile != null);
+
                 if (variantIDBStatesForSibPair.size() == 0) {
                     continue;
                 }
@@ -356,7 +356,6 @@ public class SiblingIBD extends VariantWalker {
             logger.debug("emitting " + result);
         }
         reduce(result, ibdRegionAccumulators);
-
     }
 
     private VariantContext addIBDStatesToVC(final VariantContextBuilder builder, final VariantContext vc, final List<VariantIBDState> variantIBDStates) {
@@ -459,7 +458,7 @@ public class SiblingIBD extends VariantWalker {
                     final SiblingPair siblingPair = value.siblingPair;
                     final IBDRegion region = accumulators.get(siblingPair).regionChange(value.chr, value.pos, value.ibdState, value.parentalAgreement, value.agrees);
                     if (region != null) {
-                        if (region.state == IBDState.ONE) {
+                        if (region.state == IBDState.ONEF || region.state == IBDState.ONEM) {
                             ibdRegionsFile.print(siblingPair.getName() + "\t" + siblingPair.sib1.getID() + "\t" + siblingPair.sib2.getID() + "\t" + region.chr + "\t" + region.start + "\t" + region.end + "\t" + region.state + "\t" + region.paternalIndicators + "\t" + region.maternalIndicators + "\t" + region.sites + "\t" + region.siteAgreements + "\n");
                         } else {
                             ibdRegionsFile.print(siblingPair.getName() + "\t" + siblingPair.sib1.getID() + "\t" + siblingPair.sib2.getID() + "\t" + region.chr + "\t" + region.start + "\t" + region.end + "\t" + region.state + "\t" + "NA" + "\t" + "NA" + "\t" + region.sites + "\t" + region.siteAgreements + "\n");
@@ -475,6 +474,7 @@ public class SiblingIBD extends VariantWalker {
     public Object onTraversalSuccess() {
         final SortedMap<Integer, List<VariantIBDState>> ibdStateModifications = new TreeMap<>();
         final List<VariantIBDState> finalValues = model.finalizeModel(vcfWriter != null);
+
         for (final VariantIBDState variantIBDState : finalValues) {
             if (! ibdStateModifications.containsKey(variantIBDState.pos)) {
                 ibdStateModifications.put(variantIBDState.pos, new ArrayList<>());
@@ -506,7 +506,7 @@ public class SiblingIBD extends VariantWalker {
                 }
                 final IBDRegion region = accumulator.getFinalRegion();
 
-                if (region.state == IBDState.ONE) {
+                if (region.state == IBDState.ONEF || region.state == IBDState.ONEM) {
                     ibdRegionsFile.print(siblingPair.getName() + "\t" + siblingPair.sib1.getID() + "\t" + siblingPair.sib2.getID() + "\t" + region.chr + "\t" + region.start + "\t" + region.end + "\t" + region.state + "\t" + region.paternalIndicators + "\t" + region.maternalIndicators + "\t" + region.sites + "\t" + region.siteAgreements + "\n");
                 } else {
                     ibdRegionsFile.print(siblingPair.getName() + "\t" + siblingPair.sib1.getID() + "\t" + siblingPair.sib2.getID() + "\t" + region.chr + "\t" + region.start + "\t" + region.end + "\t" + region.state + "\t" + "NA" + "\t" + "NA" + "\t" + region.sites + "\t" + region.siteAgreements + "\n");
