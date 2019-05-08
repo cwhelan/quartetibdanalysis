@@ -10,6 +10,7 @@
  */
 package org.broadinstitute.quartetibdanalysis.tools;
 
+import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.log4j.Logger;
 import org.broadinstitute.hellbender.utils.MathUtils;
@@ -26,6 +27,8 @@ public class QuartetIBDStateHMM {
     final protected static Logger logger = Logger.getLogger(QuartetIBDStateHMM.class);
 
     private final List<IBDObservation> observations = new ArrayList<>();
+    private final List<Boolean> fatherHets = new ArrayList<>();
+    private final List<Boolean> motherHets = new ArrayList<>();
     private final List<VariantContext> sites = new ArrayList<>();
     private final List<String> seqs = new ArrayList<>();
     private final List<Integer> starts = new ArrayList<>();
@@ -84,11 +87,19 @@ public class QuartetIBDStateHMM {
      * Add an observation to the HMM
      *
      * @param vc
+     * @param paternalGt
+     * @param maternalGt
      * @param observation
      * @return
      */
-    public Iterator<IBDLocus> addObservation(final VariantContext vc, final IBDObservation observation, final IBDParentalAgreement parentalIndicator, boolean keepVc) {
+    public Iterator<IBDLocus> addObservation(final VariantContext vc,
+                                             final Genotype paternalGt,
+                                             final Genotype maternalGt,
+                                             final IBDObservation observation, final IBDParentalAgreement parentalIndicator, boolean keepVc) {
         observations.add(observation);
+
+        fatherHets.add(paternalGt.isHet());
+        motherHets.add(maternalGt.isHet());
 
         if (keepVc) {
             sites.add(vc);
@@ -100,6 +111,7 @@ public class QuartetIBDStateHMM {
 
         return Collections.<IBDLocus>emptyList().iterator();
     }
+
 
     /**
      * Execute Viterbi for the final chromosome and return the results
@@ -156,8 +168,8 @@ public class QuartetIBDStateHMM {
 
         // forward and viterbi initialization
         for (final IBDState i : IBDState.values()) {
-            viterbi[0][i.ordinal()] = initialProbs.get(i) + getEmission(i, observations.get(0));
-            alphas[0][i.ordinal()] = initialProbs.get(i) + getEmission(i, observations.get(0));
+            viterbi[0][i.ordinal()] = initialProbs.get(i) + getEmission(i, observations.get(0), fatherHets.get(0), motherHets.get(0));
+            alphas[0][i.ordinal()] = initialProbs.get(i) + getEmission(i, observations.get(0), fatherHets.get(0), motherHets.get(0));
         }
 
         // forward and viterbi
@@ -170,13 +182,13 @@ public class QuartetIBDStateHMM {
                 double sumProb = Double.NEGATIVE_INFINITY;
 
                 for (final IBDState i : IBDState.values()) {
-                    final double prob = viterbi[t - 1][i.ordinal()] + transitionProbs.get(i)[j.ordinal()] + getEmission(j, observations.get(t));
+                    final double prob = viterbi[t - 1][i.ordinal()] + transitionProbs.get(i)[j.ordinal()] + getEmission(j, observations.get(t), fatherHets.get(t), motherHets.get(t));
                     if (prob > maxProb) {
                         maxProb = prob;
                         argMaxProb = i.ordinal();
                     }
 
-                    sumProb = MathUtils.approximateLog10SumLog10(sumProb, alphas[t - 1][i.ordinal()] + transitionProbs.get(i)[j.ordinal()] + getEmission(j, observations.get(t)));
+                    sumProb = MathUtils.approximateLog10SumLog10(sumProb, alphas[t - 1][i.ordinal()] + transitionProbs.get(i)[j.ordinal()] + getEmission(j, observations.get(t), fatherHets.get(t), motherHets.get(t)));
                 }
                 viterbi[t][j.ordinal()] = maxProb;
                 path[t][j.ordinal()] = (short) argMaxProb;
@@ -195,7 +207,7 @@ public class QuartetIBDStateHMM {
             for (final IBDState i : IBDState.values()) {
                 double sumProb = Double.NEGATIVE_INFINITY;
                 for (final IBDState j : IBDState.values()) {
-                    sumProb = MathUtils.approximateLog10SumLog10(sumProb, betas[t + 1][j.ordinal()] + transitionProbs.get(i)[j.ordinal()] + getEmission(j, observations.get(t + 1)));
+                    sumProb = MathUtils.approximateLog10SumLog10(sumProb, betas[t + 1][j.ordinal()] + transitionProbs.get(i)[j.ordinal()] + getEmission(j, observations.get(t + 1), fatherHets.get(t + 1), motherHets.get(t + 1)));
                 }
                 betas[t][i.ordinal()] = sumProb;
             }
@@ -247,30 +259,62 @@ public class QuartetIBDStateHMM {
      *
      * @param s
      * @param o
+     * @param aBoolean
+     * @param aBoolean1
      * @return
      */
-    private Double getEmission(final IBDState s, final IBDObservation o) {
+    private Double getEmission(final IBDState s, final IBDObservation o, final Boolean fatherHet, final Boolean motherHet) {
         switch (s) {
             case ZERO:
-                if (o == IBDObservation.ZERO || o == IBDObservation.ZERO_OR_ONE || o == IBDObservation.ZERO_OR_TWO) {
-                    return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
+                if (fatherHet && motherHet) {
+                    if (o == IBDObservation.ZERO || o == IBDObservation.ZERO_OR_TWO) {
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 2);
+                    } else {
+                        return Math.log10(ERROR_EMISSION_PROBABILITY);
+                    }
                 } else {
-                    return Math.log10(ERROR_EMISSION_PROBABILITY / 3);
+                    // only one parent is het
+                    if (o == IBDObservation.ZERO_OR_ONE) {
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY);
+                    } else {
+                        return Math.log10(ERROR_EMISSION_PROBABILITY);
+                    }
                 }
             case ONE:
-                if (o == IBDObservation.ONE || o == IBDObservation.ZERO_OR_ONE || o == IBDObservation.ONE_OR_TWO) {
-                    return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
-                } else if (o == IBDObservation.ZERO_OR_TWO) {
-                    return Math.log10(IBD1_HET_ERROR_EMISSION_PROBABILITY);
+                if (fatherHet && motherHet) {
+                    if (o == IBDObservation.ONE) {
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY);
+                    } else {
+                        return Math.log10(ERROR_EMISSION_PROBABILITY);
+                    }
                 } else {
-                    return Math.log10(IDB1_OTHER_ERROR_EMISSION_PROBABILITY / 2);
+                    // only one parent is het
+                    if (o == IBDObservation.ONE_OR_TWO) {
+                        return Math.log10(2 * NON_ERROR_EMISSION_PROBABILITY / 3);
+                    } else if ( o == IBDObservation.ZERO_OR_ONE) {
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
+                    } else if (o == IBDObservation.ZERO_OR_TWO) {
+                        return Math.log10(IBD1_HET_ERROR_EMISSION_PROBABILITY);
+                    } else {
+                        return Math.log10(IDB1_OTHER_ERROR_EMISSION_PROBABILITY);
+                    }
                 }
             case TWO:
-                if (o == IBDObservation.TWO || o == IBDObservation.ZERO_OR_TWO || o == IBDObservation.ONE_OR_TWO) {
-                    return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
+                if (fatherHet && motherHet) {
+                    if (o == IBDObservation.TWO || o == IBDObservation.ZERO_OR_TWO) {
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 2);
+                    } else {
+                        return Math.log10(ERROR_EMISSION_PROBABILITY);
+                    }
                 } else {
-                    return Math.log10(ERROR_EMISSION_PROBABILITY / 3);
+                    if (o == IBDObservation.ONE_OR_TWO) {
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 2);
+                    } else {
+                        return Math.log10(ERROR_EMISSION_PROBABILITY);
+                    }
                 }
+
+
         }
         return Double.NEGATIVE_INFINITY;
     }

@@ -91,7 +91,7 @@ public class QuartetIBDStateModel implements IBDStateModel {
                     spFile.print(vc.getContig() + "\t" + vc.getStart() + "\t" + siblingPair.getName() + "\t" + observation.ordinal() + "\n");
                 }
 
-                ibdStateHmm.addObservation(vc, observation, getParentalIndicator(siblingPair, vc), keepVC);
+                ibdStateHmm.addObservation(vc, paternalGt, maternalGt, observation, getParentalIndicator(siblingPair, vc), keepVC);
 
             }
         }
