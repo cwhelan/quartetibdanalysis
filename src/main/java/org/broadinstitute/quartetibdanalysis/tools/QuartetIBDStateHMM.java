@@ -139,6 +139,8 @@ public class QuartetIBDStateHMM {
                     observations.get(i).agreesWith(states[i]), observations.get(i)));
         }
         observations.clear();
+        fatherHets.clear();
+        motherHets.clear();
 
         seqs.clear();
         starts.clear();
