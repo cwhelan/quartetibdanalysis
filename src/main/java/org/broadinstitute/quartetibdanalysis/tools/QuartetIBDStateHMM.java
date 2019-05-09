@@ -286,15 +286,17 @@ public class QuartetIBDStateHMM {
                 if (fatherHet && motherHet) {
                     if (o == IBDObservation.ONE) {
                         return Math.log10(NON_ERROR_EMISSION_PROBABILITY);
+                    } else if (o == IBDObservation.ZERO_OR_TWO) {
+                        return Math.log10(IBD1_HET_ERROR_EMISSION_PROBABILITY);
                     } else {
-                        return Math.log10(ERROR_EMISSION_PROBABILITY);
+                        return Math.log10(IDB1_OTHER_ERROR_EMISSION_PROBABILITY);
                     }
                 } else {
                     // only one parent is het
                     if (o == IBDObservation.ONE_OR_TWO) {
-                        return Math.log10(2 * NON_ERROR_EMISSION_PROBABILITY / 3);
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 2);
                     } else if ( o == IBDObservation.ZERO_OR_ONE) {
-                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 3);
+                        return Math.log10(NON_ERROR_EMISSION_PROBABILITY / 2);
                     } else if (o == IBDObservation.ZERO_OR_TWO) {
                         return Math.log10(IBD1_HET_ERROR_EMISSION_PROBABILITY);
                     } else {
