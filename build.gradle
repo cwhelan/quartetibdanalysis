@@ -63,7 +63,7 @@ configurations.all {
         // later versions explode Hadoop
         force 'com.google.protobuf:protobuf-java:3.0.0-beta-1'
         // force testng dependency so we don't pick up a different version via GenomicsDB
-        force 'org.testng:testng:' + testNGVersion
+        //force 'org.testng:testng:' + testNGVersion
         force 'org.broadinstitute:barclay:' + barclayVersion
 
         // make sure we don't pick up an incorrect version of the GATK variant of the google-nio library
@@ -86,9 +86,15 @@ sourceSets {
 // Get the jdk files we need to run javaDoc. We need to use these during compile, testCompile,
 // test execution, and gatkDoc generation, but we don't want them as part of the runtime
 // classpath and we don't want to redistribute them in the uber jar.
-final javadocJDKFiles = files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs())
+//final javadocJDKFiles = files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs())
 
 configurations {
+    testUtilsCompile.extendsFrom compile
+    testUtilsRuntime.extendsFrom runtime
+
+    testCompile.extendsFrom testUtilsCompile
+    testRuntime.extendsFrom testUtilsRuntime
+
     externalSourceConfiguration {
         // External sources we need for doc and tab completion generation tasks (i.e., Picard sources)
         transitive false
@@ -99,8 +105,8 @@ dependencies {
     compile files('lib/SVToolkit.jar')
     compile 'org.broadinstitute:gatk:' + gatkVersion
     // javadoc utilities; compile/test only to prevent redistribution of sdk jars
-    compileOnly(javadocJDKFiles)
-    testCompile(javadocJDKFiles)
+    //compileOnly(javadocJDKFiles)
+    //testCompile(javadocJDKFiles)
 
     compile 'org.broadinstitute:barclay:' + barclayVersion
 
@@ -149,6 +155,7 @@ dependencies {
     testUtilsCompile 'org.testng:testng:' + testNGVersion
 
     testCompile sourceSets.testUtils.output
+    testUtilsCompile 'org.testng:testng:' + testNGVersion
 
     testCompile "org.mockito:mockito-core:2.10.0"
     testCompile "com.google.jimfs:jimfs:1.1"
@@ -218,7 +225,7 @@ tasks.withType(ShadowJar) {
     }
 }
 
-//apply from: "testsettings.gradle"
+apply from: "testsettings.gradle"
 
 shadowJar {
     configurations = [project.configurations.runtime]
