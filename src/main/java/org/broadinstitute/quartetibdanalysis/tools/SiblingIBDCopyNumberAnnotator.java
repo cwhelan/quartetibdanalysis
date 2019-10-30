@@ -33,7 +33,6 @@ public class SiblingIBDCopyNumberAnnotator {
     private GenotypedVariantFactory mVariantFactory = null;
     private Map<SiblingPair, IntervalTreeMap<IBDState>> ibdStateMaps;
     private List<SiblingPair> siblingPairs;
-    //private Map<String, Pedigree> mPedigrees;
     private String[] samples;
     private Map<SiblingPair, String> mSibPairToFamilyMap;
     private Float minCallRate = null;
@@ -87,18 +86,10 @@ public class SiblingIBDCopyNumberAnnotator {
 
 
         List<File> pedigreeFiles = pedigreeFileList;
-        System.out.println("about to make ped file parser");
-        try {
-            //PedFileParser pedFileParser = new PedFileParser();
 
-            final SampleDBBuilder sampleDBBuilder = new SampleDBBuilder(PedigreeValidationType.STRICT);
-            sampleDBBuilder.addSamplesFromPedigreeFiles(pedigreeFiles);
-            finalSampleDB = sampleDBBuilder.getFinalSampleDB();
-
-
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
+        final SampleDBBuilder sampleDBBuilder = new SampleDBBuilder(PedigreeValidationType.STRICT);
+        sampleDBBuilder.addSamplesFromPedigreeFiles(pedigreeFiles);
+        finalSampleDB = sampleDBBuilder.getFinalSampleDB();
 
         mSibPairToFamilyMap = new HashMap<>();
 
