@@ -7,14 +7,14 @@ import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.commons.math3.linear.*;
 import org.apache.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.GATKException;
-import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.MathUtils;
+import org.broadinstitute.hellbender.utils.samples.PedigreeValidationType;
+import org.broadinstitute.hellbender.utils.samples.SampleDB;
+import org.broadinstitute.hellbender.utils.samples.SampleDBBuilder;
 import org.broadinstitute.sv.annotation.GenotypedVariantFactory;
 import org.broadinstitute.sv.util.GenomeInterval;
 import org.broadinstitute.sv.util.IntervalTreeMap;
 import org.broadinstitute.sv.util.io.ErrorCheckingPrintWriter;
-import org.broadinstitute.sv.util.ped.PedFileParser;
-import org.broadinstitute.sv.util.ped.Pedigree;
 import org.broadinstitute.sv.util.vc.GenotypeUtilities;
 import org.broadinstitute.sv.util.vc.VariantContextUtilities;
 import org.broadinstitute.sv.util.vcf.VCFReader;
@@ -33,7 +33,6 @@ public class SiblingIBDCopyNumberAnnotator {
     private GenotypedVariantFactory mVariantFactory = null;
     private Map<SiblingPair, IntervalTreeMap<IBDState>> ibdStateMaps;
     private List<SiblingPair> siblingPairs;
-    private Map<String, Pedigree> mPedigrees;
     private String[] samples;
     private Map<SiblingPair, String> mSibPairToFamilyMap;
     private Float minCallRate = null;
@@ -44,6 +43,7 @@ public class SiblingIBDCopyNumberAnnotator {
     private ErrorCheckingPrintWriter endsConfidenceWriter;
     private int endConfidenceLikelihoodThreshold = 20;
     private PrintWriter reportWriter;
+    private SampleDB finalSampleDB;
 
     public void initialize(final boolean filterGenotypes,
                            final Double genotypeQualityThreshold,
@@ -83,12 +83,13 @@ public class SiblingIBDCopyNumberAnnotator {
         siblingPairs = new ArrayList<>();
         List<String> samplesList = new ArrayList<>();
 
+
+
         List<File> pedigreeFiles = pedigreeFileList;
-        PedFileParser pedFileParser = new PedFileParser();
-        mPedigrees = new HashMap<>();
-        for (File pedigreeFile : pedigreeFiles) {
-            mPedigrees.putAll(pedFileParser.parsePedFile(pedigreeFile));
-        }
+
+        final SampleDBBuilder sampleDBBuilder = new SampleDBBuilder(PedigreeValidationType.STRICT);
+        sampleDBBuilder.addSamplesFromPedigreeFiles(pedigreeFiles);
+        finalSampleDB = sampleDBBuilder.getFinalSampleDB();
 
         mSibPairToFamilyMap = new HashMap<>();
 
@@ -136,17 +137,17 @@ public class SiblingIBDCopyNumberAnnotator {
                 }
 
                 ibdStateMaps.get(siblingPair).put(interval, ibdState);
-                final String familyId = findFamilyId(siblingPair, mPedigrees);
+                final String familyId = findFamilyId(siblingPair);
                 if (familyId == null) {
                     throw new GATKException("Couldn't find a family ID for sib pair " + siblingPair + " in the pedigree");
                 }
                 mSibPairToFamilyMap.put(siblingPair, familyId);
 
-                if (! mPedigrees.containsKey(familyId)) {
+                if (! finalSampleDB.getFamilyIDs().contains(familyId)) {
                     throw new GATKException("Can't find familyId " + familyId + " in the pedigree");
                 }
-                samplesList.add(mPedigrees.get(familyId).getFather(siblingPair.sib1));
-                samplesList.add(mPedigrees.get(familyId).getMother(siblingPair.sib1));
+                samplesList.add(finalSampleDB.getSample(siblingPair.sib1).getPaternalID());
+                samplesList.add(finalSampleDB.getSample(siblingPair.sib1).getMaternalID());
             }
         }  catch (IOException exc) {
             throw new RuntimeException(exc.getMessage(), exc);
@@ -167,13 +168,15 @@ public class SiblingIBDCopyNumberAnnotator {
         }
     }
 
-    private String findFamilyId(final SiblingPair siblingPair, final Map<String, Pedigree> pedigrees) {
-        for (String family : mPedigrees.keySet()) {
-            if (pedigrees.get(family).getSampleIDs().contains(siblingPair.sib1) && pedigrees.get(family).getSampleIDs().contains(siblingPair.sib2)) {
-                return family;
-            }
+    private String findFamilyId(final SiblingPair siblingPair) {
+        final String sib1FamId = finalSampleDB.getSample(siblingPair.sib1).getFamilyID();
+        final String sib2FamId = finalSampleDB.getSample(siblingPair.sib2).getFamilyID();
+
+        if (sib1FamId.equals(sib2FamId)) {
+            return sib1FamId;
+        } else {
+            return null;
         }
-        return null;
     }
 
     protected void addField(StringBuilder builder, Object value) {
@@ -246,9 +249,9 @@ public class SiblingIBDCopyNumberAnnotator {
         final Genotype sib1Gt = vc.getGenotype(siblingPair.sib1);
         final Genotype sib2Gt = vc.getGenotype(siblingPair.sib2);
         final String family = mSibPairToFamilyMap.get(siblingPair);
-        final Pedigree pedigree = mPedigrees.get(family);
-        final String father = pedigree.getFather(siblingPair.sib1);
-        final String mother = pedigree.getMother(siblingPair.sib1);
+
+        final String father = finalSampleDB.getSample(siblingPair.sib1).getPaternalID();
+        final String mother = finalSampleDB.getSample(siblingPair.sib1).getMaternalID();
         final Genotype patGt = vc.getGenotype(father);
         final Genotype matGt = vc.getGenotype(mother);
 
@@ -545,8 +548,8 @@ public class SiblingIBDCopyNumberAnnotator {
                     final String sib1 = siblingPair.sib1;
                     final String sib2 = siblingPair.sib2;
 
-                    final String father = mPedigrees.get(mSibPairToFamilyMap.get(siblingPair)).getFather(siblingPair.sib1);
-                    final String mother = mPedigrees.get(mSibPairToFamilyMap.get(siblingPair)).getMother(siblingPair.sib1);
+                    final String father = finalSampleDB.getSample(siblingPair.sib1).getPaternalID();
+                    final String mother = finalSampleDB.getSample(siblingPair.sib1).getMaternalID();
 
                     if (! vc.hasGenotype(sib1) ||
                             ! vc.hasGenotype(sib2) ||
@@ -613,7 +616,7 @@ public class SiblingIBDCopyNumberAnnotator {
                     processSingleInterval(vc, siblingPair, gi, interval, overlappingIBDRegions, paralogId, minSibLL, minFamilyLL);
 
                 } else {
-                    throw new UserException("No m2 mode specified");
+                    throw new GATKException("No m2 mode specified");
                 }
             }
         }
@@ -624,7 +627,9 @@ public class SiblingIBDCopyNumberAnnotator {
         if (endsConfidenceWriter != null) {
             endsConfidenceWriter.close();
         }
-        reportWriter.close();
+        if (reportWriter != null) {
+            reportWriter.close();
+        }
     }
 
     private LikelihoodCombination getBestLikelihood(final VariantContext vc, final VariantContext end1Vc, final VariantContext end2Vc, final String sample) {
