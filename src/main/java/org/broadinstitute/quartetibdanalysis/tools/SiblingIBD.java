@@ -64,6 +64,12 @@ import java.util.*;
  * Region End
  * IBD State: One of ZERO, ONE, or TWO
  *
+ * If an output VCF file is specified, a new VCF will be written that includes
+ * the IBD state and the posterior probabilities of being in every IBD state
+ * in the FORMAT field for each sibling that was analyzed in the IBDS and IBDQ
+ * tags, as well as the possible matching states in the IBDOBS tag and the parental
+ * agreement (PATERNAL, MATERNAL, or UNKNOWN) in the IBDPA tag. Running in this mode
+ * greatly increases the amount of memory required.
  */
 @CommandLineProgramProperties(
         summary = "Compute IBD blocks between siblings",
@@ -117,7 +123,7 @@ public class SiblingIBD extends VariantWalker {
 
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
-            doc="File to which variants should be written")
+	      doc="File to which variants should be written", optional=true)
     public File outFile = null;
 
     private List<SiblingPair> siblingPairs;
