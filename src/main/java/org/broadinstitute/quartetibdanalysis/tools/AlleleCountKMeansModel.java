@@ -82,7 +82,7 @@ public class AlleleCountKMeansModel {
             return IBDState.ZERO;
         }
         if (dist1 < dist0 && dist1 < dist2) {
-            return IBDState.ONE;
+            return IBDState.ONEF;
         }
         return IBDState.TWO;
     }

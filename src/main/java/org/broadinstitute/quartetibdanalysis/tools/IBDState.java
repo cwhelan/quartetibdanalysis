@@ -18,6 +18,7 @@ package org.broadinstitute.quartetibdanalysis.tools;
 */
 enum IBDState {
     ZERO,
-    ONE,
+    ONEF,
+    ONEM,
     TWO;
 }

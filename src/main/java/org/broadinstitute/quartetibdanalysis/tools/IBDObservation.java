@@ -28,9 +28,11 @@ public enum IBDObservation {
     ZERO,
     ONE,
     TWO,
-    ZERO_OR_ONE,
+    ZERO_OR_ONEF,
+    ZERO_OR_ONEM,
     ZERO_OR_TWO,
-    ONE_OR_TWO,
+    ONEF_OR_TWO,
+    ONEM_OR_TWO,
     ZERO_OR_ONE_OR_TWO;
 
     private static boolean bothHom(final Genotype sib1Gt, final Genotype sib2Gt) {
@@ -44,15 +46,15 @@ public enum IBDObservation {
     /**
      * Given the four genotypes at a locus, return the type of IBD state observation
      *
-     * @param p1 parental genotype 1
-     * @param p2 parental genotype 2
+     * @param paternalGt paternal genotype
+     * @param maternalGt maternal genotype
      * @param s1 sibling genotype 1
      * @param s2 sibling genotype 2
      * @return the type of IBD observation indicated by the genotype configuration of the quartet
      *
      */
-    public static IBDObservation getIBDStateObservation(final Genotype p1, final Genotype p2, final Genotype s1, final Genotype s2) {
-        if (bothHet(p1, p2)) {
+    public static IBDObservation getIBDStateObservation(final Genotype paternalGt, final Genotype maternalGt, final Genotype s1, final Genotype s2) {
+        if (bothHet(paternalGt, maternalGt)) {
             if (bothHom(s1, s2)) {
                 if (s1.sameGenotype(s2)) {
                     return IBDObservation.TWO;
@@ -65,33 +67,40 @@ public enum IBDObservation {
                 // one sib het, the other hom
                 return IBDObservation.ONE;
             }
-        } else if (p1.isHet() && p2.isHom() || (p1.isHom() && p2.isHet())) {
-            if (bothHet(s1, s2)) {
-                return IBDObservation.ONE_OR_TWO;
-            } else if (bothHom(s1,s2)) {
-                return IBDObservation.ONE_OR_TWO;
+        } else if (paternalGt.isHet() && maternalGt.isHom() || (paternalGt.isHom() && maternalGt.isHet())) {
+            if (bothHet(s1, s2) || bothHom(s1, s2)) {
+                if (paternalGt.isHet()) {
+                    return IBDObservation.ONEF_OR_TWO;
+                } else {
+                    return IBDObservation.ONEM_OR_TWO;
+                }
             } else {
                 // one sib het, the other hom
-                return IBDObservation.ZERO_OR_ONE;
+                if (paternalGt.isHom()) {
+                    return IBDObservation.ZERO_OR_ONEF;
+                } else {
+                    return IBDObservation.ZERO_OR_ONEM;
+                }
             }
         } else {
-            if (! bothHom(p1,p2)) {
-                throw new GATKException("Unexpected parental genotypes " + p1 + " and " + p2 + "; expect both to be het, both to be hom, or one het and one hom");
+            if (! bothHom(paternalGt,maternalGt)) {
+                throw new GATKException("Unexpected parental genotypes " + paternalGt + " and " + maternalGt + "; expect both to be het, both to be hom, or one het and one hom");
             }
-            assert(bothHom(p1,p2));
+            assert(bothHom(paternalGt,maternalGt));
             return IBDObservation.ZERO_OR_ONE_OR_TWO;
         }
-
     }
 
     public boolean agreesWith(IBDState state) {
         switch(this) {
             case ZERO: return state == IBDState.ZERO;
-            case ONE: return state == IBDState.ONE;
+            case ONE: return state == IBDState.ONEF || state == IBDState.ONEM;
             case TWO: return state == IBDState.TWO;
-            case ZERO_OR_ONE:  return state != IBDState.TWO;
-            case ONE_OR_TWO:  return state != IBDState.ZERO;
-            case ZERO_OR_TWO: return state != IBDState.ONE;
+            case ZERO_OR_ONEF:  return state == IBDState.ZERO || state == IBDState.ONEF;
+            case ZERO_OR_ONEM:  return state == IBDState.ZERO || state == IBDState.ONEM;
+            case ONEF_OR_TWO:  return state == IBDState.ONEF || state == IBDState.TWO;
+            case ONEM_OR_TWO:  return state == IBDState.ONEM || state == IBDState.TWO;
+            case ZERO_OR_TWO: return state == IBDState.ZERO || state == IBDState.TWO;
             case ZERO_OR_ONE_OR_TWO: return true;
         }
         return false;
